@@ -1,4 +1,5 @@
 from typing import Optional
+from src.utils import dict_sample
 
 
 class Household:
@@ -7,19 +8,22 @@ class Household:
         self.hid: Optional[float] = None
         self.hh_type_a: Optional[str] = None
         self.hh_type_e: Optional[str] = None
+        self.state: Optional[int] = None
         self.imputed_newest_const_date: Optional[float] = None
         self.imputed_oldest_const_date: Optional[float] = None
+        self.id_building_construction_period: Optional[int] = None
         self.imputed_house_condition: Optional[str] = None
         self.house_size: Optional[float] = None
+        self.head_age: Optional[int] = None
         self.n_persons: Optional[float] = None
         self.n_kids: Optional[float] = None
         self.ac: Optional[int] = None
-        self.pv: Optional[int] = None
 
     def setup(self, household_info: dict):
         for key, value in household_info.items():
             if key in self.__dict__.keys():
                 setattr(self, key, value)
+        self.init_building_construction_period()
         return self
 
     def map_flex_scenario(self):
@@ -28,7 +32,6 @@ class Household:
         self.id_space_heating_tank: int = 1  # default value
         self.id_hot_water_tank: int = 1  # default value
         self.id_heating_element: int = 1  # default value
-        self.id_vehicle: int = 1  # default value, always "no EV"
         self.id_battery: int = 1  # default value, always "no battery"
         self.id_energy_price: int = 1
 
@@ -38,35 +41,78 @@ class Household:
         self.id_behavior: int = self.map_behavior()
         self.id_space_cooling_technology: int = self.map_space_cooling_technology()
 
-        # focusing technology: take the difference of 1 and 2
-        self.id_pv: int = 1
+    def init_building_construction_period(self):
+        self.id_building_construction_period = 0
+        building_year = 0.5 * (self.imputed_newest_const_date + self.imputed_oldest_const_date)
+        if building_year <= 1948:
+            self.id_building_construction_period = 1
+        elif 1949 <= building_year <= 1978:
+            self.id_building_construction_period = 2
+        elif 1979 <= building_year <= 1994:
+            self.id_building_construction_period = 3
+        elif 1995 <= building_year:
+            self.id_building_construction_period = 4
+        else:
+            pass
 
     def map_building(self):
-        # a representative building from the database will be mapped based on
-        self.hh_type_a: Optional[float] = None  # SFH values: undetached house, detached house, and farm house.
-        self.hh_type_e: Optional[str] = None  # urban_region or rural_region
-        self.imputed_newest_const_date: Optional[float] = None  # starting year of construction
-        self.imputed_oldest_const_date: Optional[float] = None  # ending year of construction
-        self.imputed_house_condition: Optional[str] = None  # values: in a good condition, some renovations, full_renovations, dilapidated, NAs (as “in a good condition").
-        self.house_size: Optional[float] = None
-        # missing --> age class, renovation information
-        return 1
+        id_building = 0
+        SFH = ['undetached_house', 'detached_house', 'farm_house']
+        RENOVATED = ['in a good condition', 'some renovations', 'full_renovations']
+        if self.hh_type_a in SFH:
+            if self.id_building_construction_period == 1:
+                if self.imputed_house_condition in RENOVATED:
+                    id_building = 1
+                else:
+                    id_building = 2
+            elif self.id_building_construction_period == 2:
+                if self.imputed_house_condition in RENOVATED:
+                    id_building = 3
+                else:
+                    id_building = 4
+            elif self.id_building_construction_period == 3:
+                if self.imputed_house_condition in RENOVATED:
+                    id_building = 5
+                else:
+                    id_building = 6
+            elif self.id_building_construction_period == 4:
+                if self.imputed_house_condition in RENOVATED:
+                    id_building = 7
+                else:
+                    id_building = 8
+            else:
+                pass
+        return id_building
 
-    def map_boiler(self):
-        # type of heating system and heating technology --> mapped based on RENDER data
-        self.hh_type_a: Optional[float] = None  # SFH values: undetached house, detached house, and farm house.
-        self.hh_type_e: Optional[str] = None  # urban_region or rural_region
-        self.imputed_newest_const_date: Optional[float] = None  # starting year of construction
-        self.imputed_oldest_const_date: Optional[float] = None  # ending year of construction
-        return 1
+    @staticmethod
+    def map_boiler():
+        heating_technology_stock = {
+            1: 0.070070771,  # HP
+            2: 0.516852021,  # gases
+            3: 0.077408182,  # solids
+            4: 0.03903943,  # district heating
+            5: 0.296629596  # liquids
+        }
+        return dict_sample(heating_technology_stock)
 
     def map_behavior(self):
-        # appliance electricity and hot water profiles
-        # --> without teleworking, we distribute annual consumption (according to person number) to generic profiles
-        # --> with teleworking, we generate profiles based on assumptions of teleworking and household composition
-        self.n_persons: Optional[float] = None
-        self.n_kids: Optional[float] = None
-        return 1
+        id_behavior = 0
+        if self.n_persons == 1:
+            id_behavior = 1
+        elif self.n_persons == 2:
+            if self.head_age < 65 and self.n_kids == 0:
+                id_behavior = 2
+            elif self.head_age >= 65:
+                id_behavior = 5
+        elif self.n_persons == 3:
+            if self.n_kids == 1:
+                id_behavior = 3
+        elif self.n_persons == 4:
+            if self.n_kids == 2:
+                id_behavior = 4
+        else:
+            pass
+        return id_behavior
 
     def map_space_cooling_technology(self):
         ac_dict = {
@@ -87,18 +133,9 @@ class Household:
             "ID_SpaceCoolingTechnology": self.id_space_cooling_technology,
             "ID_EnergyPrice": self.id_energy_price,
             "ID_Behavior": self.id_behavior,
-            "ID_PV": self.id_pv,
             "ID_Battery": self.id_battery,
-            "ID_Vehicle": self.id_vehicle,
         }
 
-    def energy_cost_change(self):
-        # Energy cost change of following technology changes can be fetched from FLEX-Operation results database
-        # adopting PV or increasing its size
-        # adopting battery or increasing its size
-        # switch to HP from a fuel-based boiler
-        # adopting SEMS
-        ...
 
 
 

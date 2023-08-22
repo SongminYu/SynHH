@@ -1,5 +1,3 @@
-import random
-
 import pandas as pd
 import pyreadr
 from tqdm import tqdm
@@ -7,25 +5,60 @@ from src.household import Household
 
 
 def get_synth_hh():
-    df = pyreadr.read_r('data/household_synth.rds')[None]
+    df = pyreadr.read_r('input/household_synth.rds')[None]
     df.rename(columns={'imputed_newest_const_dates': 'imputed_newest_const_date'}, inplace=True)
     return df
 
 
 def describe_synth_hh():
-    print(get_synth_hh().describe().to_string())
+    df = get_synth_hh()
+    print(df.describe().to_string())
 
 
-def gen_synth_hh_flex_scenarios():
+def map_synth_hh_flex_scenarios():
     flex_scenarios = []
     df = get_synth_hh()
     for index, row in tqdm(df.iterrows(), total=len(df)):
         hh = Household().setup(row.to_dict())
         hh.map_flex_scenario()
         flex_scenarios.append(hh.gen_flex_scenario())
-    pd.DataFrame(flex_scenarios).to_csv('data/flex_scenarios.csv', index=False)
+    pd.DataFrame(flex_scenarios).to_csv('output/flex_scenario_mapping.csv', index=False)
+
+
+def calc_pv_benefit():
+    synth_hh = pd.read_csv('output/flex_scenario_mapping.csv')
+    flex_scenarios = pd.read_excel('input/flex_scenarios/Scenarios.xlsx')
+    flex_results = pd.read_excel('input/flex_scenarios/Result_RefScenarios.xlsx')
+    flex_results.set_index('ID_Scenario', inplace=True)
+
+    def find_flex_scenarios(row):
+        df = flex_scenarios.loc[(flex_scenarios["ID_Building"] == row["ID_Building"]) &
+                                (flex_scenarios["ID_Behavior"] == row["ID_Behavior"]) &
+                                (flex_scenarios["ID_Boiler"] == row["ID_Boiler"]) &
+                                (flex_scenarios["ID_HotWaterTank"] == row["ID_HotWaterTank"]) &
+                                (flex_scenarios["ID_SpaceHeatingTank"] == row["ID_SpaceHeatingTank"]) &
+                                (flex_scenarios["ID_Battery"] == row["ID_Battery"]) &
+                                (flex_scenarios["ID_SpaceCoolingTechnology"] == row["ID_SpaceCoolingTechnology"])]
+        scenario_ids = {}
+        for _, scenario_row in df.iterrows():
+            scenario_ids[scenario_row["ID_PV"]] = scenario_row["ID_Scenario"]
+        return scenario_ids
+
+    synth_hh_update = []
+    for index, row in tqdm(synth_hh.iterrows(), total=len(synth_hh)):
+        flex_scenario_ids = find_flex_scenarios(row)
+        if len(flex_scenario_ids) > 0:
+            d = row.to_dict()
+            total_cost_with_PV = flex_results.iloc[flex_scenario_ids[1]]["TotalCost"]
+            total_cost_without_PV = flex_results.iloc[flex_scenario_ids[2]]["TotalCost"]
+            d["TotalCost_PV"] = total_cost_with_PV
+            d["TotalCost_noPV"] = total_cost_without_PV
+            d["PV_benefit"] = total_cost_without_PV - total_cost_with_PV
+            synth_hh_update.append(d)
+    pd.DataFrame(synth_hh_update).to_csv('output/synth_hh_pv_benefit.csv', index=False)
 
 
 if __name__ == "__main__":
     # describe_synth_hh()
-    gen_synth_hh_flex_scenarios()
+    # map_synth_hh_flex_scenarios()
+    calc_pv_benefit()
