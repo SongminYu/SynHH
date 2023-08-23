@@ -1,6 +1,7 @@
 from typing import Optional
 from src.utils import dict_sample
-
+import pandas as pd
+import numpy as np
 
 class Household:
 
@@ -9,7 +10,6 @@ class Household:
         self.synth: Optional[str] = None
         self.hid: Optional[float] = None
         self.hh_type_a: Optional[str] = None
-        self.hh_type_e: Optional[str] = None
         self.state: Optional[int] = None
         self.imputed_newest_const_date: Optional[float] = None
         self.imputed_oldest_const_date: Optional[float] = None
