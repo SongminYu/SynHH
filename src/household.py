@@ -5,6 +5,8 @@ from src.utils import dict_sample
 class Household:
 
     def __init__(self):
+        self.year: Optional[float] = None
+        self.synth: Optional[str] = None
         self.hid: Optional[float] = None
         self.hh_type_a: Optional[str] = None
         self.hh_type_e: Optional[str] = None
@@ -123,6 +125,8 @@ class Household:
 
     def gen_flex_scenario(self):
         return{
+            "year": self.year,
+            "synth": self.synth,
             "hid": self.hid,
             "ID_Region": self.id_region,
             "ID_Building": self.id_building,

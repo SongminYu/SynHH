@@ -12,6 +12,7 @@ def get_synth_hh():
 
 def describe_synth_hh():
     df = get_synth_hh()
+    print(df.columns)
     print(df.describe().to_string())
 
 
@@ -22,11 +23,11 @@ def map_synth_hh_flex_scenarios():
         hh = Household().setup(row.to_dict())
         hh.map_flex_scenario()
         flex_scenarios.append(hh.gen_flex_scenario())
-    pd.DataFrame(flex_scenarios).to_csv('output/flex_scenario_mapping.csv', index=False)
+    pd.DataFrame(flex_scenarios).to_csv('output/flex_scenario_mapping_updated.csv', index=False)
 
 
 def calc_pv_benefit():
-    synth_hh = pd.read_csv('output/flex_scenario_mapping.csv')
+    synth_hh = pd.read_csv('output/flex_scenario_mapping_updated.csv')
     flex_scenarios = pd.read_excel('input/flex_scenarios/Scenarios.xlsx')
     flex_results = pd.read_excel('input/flex_scenarios/Result_RefScenarios.xlsx')
     flex_results.set_index('ID_Scenario', inplace=True)
@@ -49,13 +50,13 @@ def calc_pv_benefit():
         flex_scenario_ids = find_flex_scenarios(row)
         if len(flex_scenario_ids) > 0:
             d = row.to_dict()
-            total_cost_with_PV = flex_results.iloc[flex_scenario_ids[1]]["TotalCost"]
-            total_cost_without_PV = flex_results.iloc[flex_scenario_ids[2]]["TotalCost"]
-            d["TotalCost_PV"] = total_cost_with_PV
-            d["TotalCost_noPV"] = total_cost_without_PV
-            d["PV_benefit"] = total_cost_without_PV - total_cost_with_PV
+            d["TotalCost_withPV"] = flex_results.iloc[flex_scenario_ids[1]]["TotalCost"]
+            d["TotalCost_withoutPV"] = flex_results.iloc[flex_scenario_ids[2]]["TotalCost"]
+            d["Grid2Load_withPV"] = flex_results.iloc[flex_scenario_ids[1]]["Grid2Load"]
+            d["Grid2Load_withoutPV"] = flex_results.iloc[flex_scenario_ids[2]]["Grid2Load"]
+            d["Feed2Grid_withPV"] = flex_results.iloc[flex_scenario_ids[1]]["Feed2Grid"]
             synth_hh_update.append(d)
-    pd.DataFrame(synth_hh_update).to_csv('output/synth_hh_pv_benefit.csv', index=False)
+    pd.DataFrame(synth_hh_update).to_csv('output/synth_hh_pv_benefit_updated.csv', index=False)
 
 
 if __name__ == "__main__":
