@@ -125,6 +125,7 @@ class Household:
 
     def gen_flex_scenario(self):
         return{
+            "index": self.index,
             "year": self.year,
             "synth": self.synth,
             "hid": self.hid,
