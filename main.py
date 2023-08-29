@@ -20,14 +20,14 @@ def map_synth_hh_flex_scenarios():
     flex_scenarios = []
     df = get_synth_hh()
     for index, row in tqdm(df.iterrows(), total=len(df)):
-        hh = Household().setup(row.to_dict())
+        hh = Household(index).setup(row.to_dict())
         hh.map_flex_scenario()
         flex_scenarios.append(hh.gen_flex_scenario())
-    pd.DataFrame(flex_scenarios).to_csv('output/flex_scenario_mapping_updated.csv', index=False)
+    pd.DataFrame(flex_scenarios).to_csv('output/flex_scenario_mapping.csv', index=False)
 
 
 def calc_pv_benefit():
-    synth_hh = pd.read_csv('output/flex_scenario_mapping_updated.csv')
+    synth_hh = pd.read_csv('output/flex_scenario_mapping.csv')
     flex_scenarios = pd.read_excel('input/flex_scenarios/Scenarios.xlsx')
     flex_results = pd.read_excel('input/flex_scenarios/Result_RefScenarios.xlsx')
     flex_results.set_index('ID_Scenario', inplace=True)
@@ -56,7 +56,7 @@ def calc_pv_benefit():
             d["Grid2Load_withoutPV"] = flex_results.iloc[flex_scenario_ids[2]]["Grid2Load"]
             d["Feed2Grid_withPV"] = flex_results.iloc[flex_scenario_ids[1]]["Feed2Grid"]
             synth_hh_update.append(d)
-    pd.DataFrame(synth_hh_update).to_csv('output/synth_hh_pv_benefit_updated.csv', index=False)
+    pd.DataFrame(synth_hh_update).to_csv('output/synth_hh_pv_benefit.csv', index=False)
 
 
 if __name__ == "__main__":

@@ -3,9 +3,11 @@ from src.utils import dict_sample
 import pandas as pd
 import numpy as np
 
+
 class Household:
 
-    def __init__(self):
+    def __init__(self, index: int):
+        self.index = index
         self.year: Optional[float] = None
         self.synth: Optional[str] = None
         self.hid: Optional[float] = None
@@ -102,16 +104,14 @@ class Household:
         if self.n_persons == 1:
             id_behavior = 1
         elif self.n_persons == 2:
-            if self.head_age < 65 and self.n_kids == 0:
+            if self.head_age < 65:
                 id_behavior = 2
             elif self.head_age >= 65:
                 id_behavior = 5
         elif self.n_persons == 3:
-            if self.n_kids == 1:
-                id_behavior = 3
-        elif self.n_persons == 4:
-            if self.n_kids == 2:
-                id_behavior = 4
+            id_behavior = 3
+        elif self.n_persons >= 4:
+            id_behavior = 4
         else:
             pass
         return id_behavior
